@@ -2,11 +2,12 @@ package walker
 
 import (
 	"bytes"
+	"fmt"
+	"golang.org/x/xerrors"
 	"io"
 	"os"
 	"sync"
-
-	"golang.org/x/xerrors"
+	"time"
 
 	xio "github.com/aquasecurity/trivy/pkg/x/io"
 )
@@ -50,7 +51,17 @@ func (o *cachedFile) Open() (xio.ReadSeekCloserAt, error) {
 
 			o.filePath = f.Name()
 		} else {
-			b, err := io.ReadAll(o.reader)
+			var b []byte
+			var err error
+			for i := 0; i < 3; i++ {
+				b, err = io.ReadAll(o.reader)
+				if err == io.ErrUnexpectedEOF {
+					fmt.Println("Got unexpected EOF error. Retrying after 5 seconds")
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				break
+			}
 			if err != nil {
 				o.err = xerrors.Errorf("unable to read the file: %w", err)
 				return
