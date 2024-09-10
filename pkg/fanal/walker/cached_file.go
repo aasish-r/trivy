@@ -56,13 +56,15 @@ func (o *cachedFile) Open() (xio.ReadSeekCloserAt, error) {
 			for i := 0; i < 3; i++ {
 				b, err = io.ReadAll(o.reader)
 				if err == io.ErrUnexpectedEOF {
-					fmt.Println("Got unexpected EOF error. Retrying after 5 seconds")
+					fmt.Printf("Got unexpected EOF error on file %s after downloading %n bytes. Retrying after 5 seconds\n", o.filePath, len(b))
 					time.Sleep(5 * time.Second)
 					continue
 				}
 				break
 			}
-			if err != nil {
+			if err == io.ErrUnexpectedEOF {
+				fmt.Printf("Retries didn't solve issue. Skipping file %s\n", o.filePath)
+			} else if err != nil {
 				o.err = xerrors.Errorf("unable to read the file: %w", err)
 				return
 			}
